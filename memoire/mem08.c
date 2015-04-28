@@ -17,15 +17,15 @@ int opsem(int sem, int i)
 {
     struct sembuf op;
 
-	op.sem_num = 0;
-	op.sem_op = i;
-	op.sem_flg = 0;
-	
-	if ((semop(sem, &op, 1)) < 0)
-	{
-	    perror("[semop]");
-	    exit(-1);
-	}
+    op.sem_num = 0;
+    op.sem_op  = i;
+    op.sem_flg = 0;
+    
+    if ((semop(sem, &op, 1)) < 0)
+    {
+        perror("[semop]");
+        exit(-1);
+    }
 }
 
 void down(int sem)
