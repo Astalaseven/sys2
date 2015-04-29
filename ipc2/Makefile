@@ -12,10 +12,10 @@ ipc2: ipc030 ipc046
 	@echo "        "
 	@./ipc046
 
-ipc030:
+ipc030: ipc030.c
 	gcc ipc030.c -o ipc030
 
-ipc046:
+ipc046: ipc046.c
 	gcc ipc046.c -o ipc046
 
 clean:
