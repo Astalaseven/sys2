@@ -37,7 +37,7 @@ int main()
         {
             down(-1);
             
-            printf("A\n"); fflush(stdout);
+            printf("A "); fflush(stdout);
             sleep(1);
 
             up(+2);
@@ -52,7 +52,7 @@ int main()
         {
             down(-2);
             
-            printf("B\n"); fflush(stdout);
+            printf("B "); fflush(stdout);
             sleep(1);
 
             up(+1);

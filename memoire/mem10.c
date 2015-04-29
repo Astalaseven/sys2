@@ -194,7 +194,7 @@ int main()
                 (*cii).head %= ARRAY_SIZE;
                 up(tq);
                              
-                printf("%c ", (*cii).text[(*cii).head % ARRAY_SIZE]); fflush(stdout);
+                printf("%c ", (*cii).text[(*cii).head]); fflush(stdout);
                 
                 up(empty);
             }
