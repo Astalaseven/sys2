@@ -78,7 +78,7 @@ void clean(int signal)
     // kill all child process before memory/semaphore cleaning
     int i = 0;
     for (; i < (NB_CONS + 1); ++i)
-        kill(pids[i], SIGKILL);
+        kill(pids[i], SIGPIPE);
     
     // detach and delete shared memory
     shmdt(cii);
