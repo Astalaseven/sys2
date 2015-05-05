@@ -17,6 +17,17 @@ affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres,
 #define ARRAY_SIZE 5
 
 
+struct strci
+{
+    char text[ARRAY_SIZE];
+    int pos;
+};
+
+int empty, filled, position, shm;
+struct strci * ci;
+pid_t pids[NB_PROD + 1]; // pids of productors + consommator
+
+
 int opsem(int sem, int i)
 {
     struct sembuf op;
@@ -44,12 +55,6 @@ void up(int sem)
     opsem(sem, +1);
 }
 
-
-int empty, filled, position, shm;
-struct strci * ci;
-pid_t pids[NB_PROD + 1]; // pids of productors + consommator
-
-
 void clean()
 {
     int i = 0;
@@ -59,57 +64,55 @@ void clean()
     printf("\n"); fflush(stdout);
 
     // detach shared memory
-    shmdt(ci);
+    if (shmdt(ci) < 0)
+    {
+        perror("[shmdt]");
+    }
     
     // delete shared memory
-    shmctl(shm, IPC_RMID, 0);
-
+    if ((shmctl(shm, IPC_RMID, 0)) < 0)
+    {
+        perror("[shmctl -- delete]");
+    }
 
     // delete filled sem
     if ((semctl(filled, 1, IPC_RMID, 0)) < 0)
     {
         perror("[semctl -- delete]");
-        exit(-1);
     }
     
     // delete empty sem
     if ((semctl(empty, 1, IPC_RMID, 0)) < 0)
     {
         perror("[semctl -- delete]");
-        exit(-1);
     }
     
     // delete position sem
     if ((semctl(position, 1, IPC_RMID, 0)) < 0)
     {
         perror("[semctl -- delete]");
-        exit(-1);
     }
+    
+    exit(0);
 }
-
-struct strci
-{
-    char text[ARRAY_SIZE];
-    int pos;
-};
-
 
 int main()
 {
     int i;
     
+    // handler for ctrl-c, needed to stop the program and clean memory/semaphores
     signal(SIGINT, clean);
-   
     
-    // init 5 bytes memory zone
-    if ((shm = shmget(8, 5, 0777|IPC_CREAT)) < 0)
+    
+    // init ARRAY_SIZE bytes memory zone
+    if ((shm = shmget(7, sizeof(struct strci), 0666|IPC_CREAT)) < 0)
     {
         perror("[shmget]");
         exit(-1);
     }
     
     // attach memory zone
-    ci = (struct strci *) shmat(shm, 0, 0777);
+    ci = (struct strci *) shmat(shm, 0, 0666);
     (*ci).pos = 0;
     
     // create semaphore filled cases
@@ -133,8 +136,8 @@ int main()
         exit(-1);
     }
     
-    // init semaphore empty cases at 5
-    if ((semctl(empty, 0, SETVAL, 5)) < 0)
+    // init semaphore empty cases at ARRAY_SIZE
+    if ((semctl(empty, 0, SETVAL, ARRAY_SIZE)) < 0)
     {
         perror("[semctl -- empty]");
         exit(-1);
@@ -169,7 +172,7 @@ int main()
                 down(position);
                 //printf("[debug − %d] :: %d −− %c\n", getpid(), (*ci).pos, (*ci).text[(*ci).pos]); fflush(stdout);
                 (*ci).pos += 1;
-                (*ci).pos %= 5;
+                (*ci).pos %= ARRAY_SIZE;
                 up(position);
                 
                 sleep(1);
@@ -186,7 +189,7 @@ int main()
         for (i = 0; i < (NB_PROD * 26); ++i)
         {
             down(filled);
-            printf("%c", (*ci).text[i % 5]); fflush(stdout);
+            printf("%c", (*ci).text[i % ARRAY_SIZE]); fflush(stdout);
             sleep(1);
             up(empty);
         }

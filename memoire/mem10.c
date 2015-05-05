@@ -24,7 +24,7 @@ struct strcii
 
 int empty, filled, tq, shm, sem;
 struct strcii * cii;
-pid_t pids[NB_CONS + 1]; // pids of productors + consommator
+pid_t pids[NB_CONS + 1]; // pids of consommators + productor
 
 
 int opsem(int sem, int i)
@@ -35,11 +35,13 @@ int opsem(int sem, int i)
     op.sem_op  = i;
     op.sem_flg = 0;
     
-    if ((semop(sem, &op, 1)) < 0)
+    if ((i = semop(sem, &op, 1)) < 0)
     {
         perror("[semop]");
         exit(-1);
     }
+    
+    return i;
 }
 
 void down(int sem)
@@ -69,7 +71,6 @@ void delete_sem(int sem)
         exit(-1);
     }
 }
-
 
 void clean(int signal)
 {
