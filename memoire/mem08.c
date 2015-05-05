@@ -13,7 +13,7 @@ affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres,
 #include <unistd.h>
 
 
-#define NB_PROD 5  // nb productors
+#define NB_PROD 2  // nb productors
 #define ARRAY_SIZE 5
 
 
@@ -21,14 +21,14 @@ struct strci
 {
     char text[ARRAY_SIZE];
     int pos;
+    pid_t pids[NB_PROD + 1]; // pids of productors + consommator
 };
 
 int empty, filled, position, shm;
 struct strci * ci;
-pid_t pids[NB_PROD + 1]; // pids of productors + consommator
 
 
-int opsem(int sem, int i)
+void opsem(int sem, int i)
 {
     struct sembuf op;
 
@@ -36,13 +36,11 @@ int opsem(int sem, int i)
     op.sem_op  = i;
     op.sem_flg = 0;
     
-    if ((i = semop(sem, &op, 1)) < 0)
+    if ((semop(sem, &op, 1)) < 0)
     {
         perror("[semop]");
         exit(-1);
     }
-    
-    return i;
 }
 
 void down(int sem)
@@ -55,16 +53,14 @@ void up(int sem)
     opsem(sem, +1);
 }
 
-void clean()
+void clean(int signal)
 {
     int i = 0;
     for (; i < (NB_PROD + 1); ++i)
-        kill(pids[i], SIGPIPE);
-        
-    printf("\n"); fflush(stdout);
+        kill((*ci).pids[i], SIGKILL);
 
     // detach shared memory
-    if (shmdt(ci) < 0)
+    if ((shmdt(ci)) < 0)
     {
         perror("[shmdt]");
     }
@@ -93,7 +89,7 @@ void clean()
         perror("[semctl -- delete]");
     }
     
-    exit(0);
+    exit(signal);
 }
 
 int main()
@@ -162,7 +158,7 @@ int main()
     {
         if (fork() == 0)
         {
-            pids[i] = getpid();
+            (*ci).pids[i] = getpid();
             
             for (i = 0; i < 26; ++i)
             {
@@ -186,6 +182,8 @@ int main()
     // spawn only consommator
     if (fork() == 0)
     {
+        (*ci).pids[NB_PROD] = getpid();
+        
         for (i = 0; i < (NB_PROD * 26); ++i)
         {
             down(filled);
@@ -201,7 +199,5 @@ int main()
     // wait for the forks to finish
     while (wait(0) > 0);
     
-    clean();
-
-    exit(0);
+    clean(0);
 }

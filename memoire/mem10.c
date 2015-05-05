@@ -20,14 +20,15 @@ struct strcii
     char text[ARRAY_SIZE];
     int head;
     int queue;
+    pid_t pids[NB_CONS + 1]; // pids of consommators + productor
 };
 
 int empty, filled, tq, shm, sem;
 struct strcii * cii;
-pid_t pids[NB_CONS + 1]; // pids of consommators + productor
 
 
-int opsem(int sem, int i)
+
+void opsem(int sem, int i)
 {
     struct sembuf op;
 
@@ -35,13 +36,11 @@ int opsem(int sem, int i)
     op.sem_op  = i;
     op.sem_flg = 0;
     
-    if ((i = semop(sem, &op, 1)) < 0)
+    if ((semop(sem, &op, 1)) < 0)
     {
         perror("[semop]");
         exit(-1);
     }
-    
-    return i;
 }
 
 void down(int sem)
@@ -72,14 +71,14 @@ void delete_sem(int sem)
     }
 }
 
-void clean(int signal)
+void clean()
 {
     printf("\n");
     
     // kill all child process before memory/semaphore cleaning
     int i = 0;
     for (; i < (NB_CONS + 1); ++i)
-        kill(pids[i], SIGPIPE);
+        kill((*cii).pids[i], SIGKILL);
     
     // detach and delete shared memory
     shmdt(cii);
@@ -159,7 +158,7 @@ int main()
     // spawn only productor
     if (fork() == 0)
     {
-        pids[0] = getpid(); // save all pids to kill them later
+        (*cii).pids[0] = getpid(); // save all (*cii).pids to kill them later
         
         int i = 0;
         
@@ -184,7 +183,7 @@ int main()
     {
         if (fork() == 0)
         {
-            pids[i + 1] = getpid(); // + 1 because productor pid
+            (*cii).pids[i + 1] = getpid(); // + 1 because productor pid
         
             while (1)
             {
