@@ -22,9 +22,9 @@ struct strcii
     int queue;
 };
 
-static int empty, filled, tq, shm, sem;
-static struct strcii * cii;
-static pid_t pids[NB_CONS + 1]; // pids of productors + consommator
+int empty, filled, tq, shm, sem;
+struct strcii * cii;
+pid_t pids[NB_CONS + 1]; // pids of productors + consommator
 
 
 int opsem(int sem, int i)

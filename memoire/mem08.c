@@ -5,9 +5,12 @@ affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres,
  
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sem.h>
 #include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 
 #define NB_PROD 2  // nb productors
@@ -21,11 +24,13 @@ int opsem(int sem, int i)
     op.sem_op  = i;
     op.sem_flg = 0;
     
-    if ((semop(sem, &op, 1)) < 0)
+    if ((i = semop(sem, &op, 1)) < 0)
     {
         perror("[semop]");
         exit(-1);
     }
+    
+    return i;
 }
 
 void down(int sem)
@@ -41,8 +46,8 @@ void up(int sem)
 
 int main()
 {
-    int i, j;
-    int empty, filled, shm, sem;
+    int i;
+    int empty, filled, shm;
     char * text;
     
     
@@ -93,6 +98,7 @@ int main()
             {
                 down(empty);
                 text[i % 5] = 'a' + i;
+                sleep(1);
                 up(filled);
             }
             
@@ -106,7 +112,8 @@ int main()
         for (i = 0; i < (NB_PROD * 26); ++i)
         {
             down(filled);
-            printf("%c", text[i % 5]);
+            printf("%c", text[i % 5]); fflush(stdout);
+            sleep(1);
             up(empty);
         }
         
