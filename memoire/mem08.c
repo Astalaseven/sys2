@@ -13,7 +13,8 @@ affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres,
 #include <unistd.h>
 
 
-#define NB_PROD 2  // nb productors
+#define NB_PROD 5  // nb productors
+#define ARRAY_SIZE 5
 
 
 int opsem(int sem, int i)
@@ -44,12 +45,61 @@ void up(int sem)
 }
 
 
+int empty, filled, position, shm;
+struct strci * ci;
+pid_t pids[NB_PROD + 1]; // pids of productors + consommator
+
+
+void clean()
+{
+    int i = 0;
+    for (; i < (NB_PROD + 1); ++i)
+        kill(pids[i], SIGPIPE);
+        
+    printf("\n"); fflush(stdout);
+
+    // detach shared memory
+    shmdt(ci);
+    
+    // delete shared memory
+    shmctl(shm, IPC_RMID, 0);
+
+
+    // delete filled sem
+    if ((semctl(filled, 1, IPC_RMID, 0)) < 0)
+    {
+        perror("[semctl -- delete]");
+        exit(-1);
+    }
+    
+    // delete empty sem
+    if ((semctl(empty, 1, IPC_RMID, 0)) < 0)
+    {
+        perror("[semctl -- delete]");
+        exit(-1);
+    }
+    
+    // delete position sem
+    if ((semctl(position, 1, IPC_RMID, 0)) < 0)
+    {
+        perror("[semctl -- delete]");
+        exit(-1);
+    }
+}
+
+struct strci
+{
+    char text[ARRAY_SIZE];
+    int pos;
+};
+
+
 int main()
 {
     int i;
-    int empty, filled, shm;
-    char * text;
     
+    signal(SIGINT, clean);
+   
     
     // init 5 bytes memory zone
     if ((shm = shmget(8, 5, 0777|IPC_CREAT)) < 0)
@@ -59,7 +109,8 @@ int main()
     }
     
     // attach memory zone
-    text = (char *) shmat(shm, 0, 0777);
+    ci = (struct strci *) shmat(shm, 0, 0777);
+    (*ci).pos = 0;
     
     // create semaphore filled cases
     if ((filled = semget(8, 1, 0666|IPC_CREAT)) < 0)
@@ -89,15 +140,38 @@ int main()
         exit(-1);
     }
     
+    // create semaphore position
+    if ((position = semget(10, 1, 0666|IPC_CREAT)) < 0)
+    {
+        perror("[semget -- position]");
+        exit(-1);
+    }
+    
+    // init semaphore position at 1
+    if ((semctl(position, 0, SETVAL, 1)) < 0)
+    {
+        perror("[semctl -- position]");
+        exit(-1);
+    }
+    
     // spawn of new productors
     for (i = 0; i < NB_PROD; ++i)
     {
         if (fork() == 0)
         {
+            pids[i] = getpid();
+            
             for (i = 0; i < 26; ++i)
             {
                 down(empty);
-                text[i % 5] = 'a' + i;
+                (*ci).text[(*ci).pos] = 'a' + i;
+                
+                down(position);
+                //printf("[debug − %d] :: %d −− %c\n", getpid(), (*ci).pos, (*ci).text[(*ci).pos]); fflush(stdout);
+                (*ci).pos += 1;
+                (*ci).pos %= 5;
+                up(position);
+                
                 sleep(1);
                 up(filled);
             }
@@ -112,7 +186,7 @@ int main()
         for (i = 0; i < (NB_PROD * 26); ++i)
         {
             down(filled);
-            printf("%c", text[i % 5]); fflush(stdout);
+            printf("%c", (*ci).text[i % 5]); fflush(stdout);
             sleep(1);
             up(empty);
         }
@@ -124,27 +198,7 @@ int main()
     // wait for the forks to finish
     while (wait(0) > 0);
     
-    // detach shared memory
-    shmdt(text);
-    
-    // delete shared memory
-    shmctl(shm, IPC_RMID, 0);
-
-
-    // delete filled sem
-    if ((semctl(filled, 1, IPC_RMID, 0)) < 0)
-    {
-        perror("[semctl -- delete]");
-        exit(-1);
-    }
-    
-    // delete empty sem
-    if ((semctl(empty, 1, IPC_RMID, 0)) < 0)
-    {
-        perror("[semctl -- delete]");
-        exit(-1);
-    }
-
+    clean();
 
     exit(0);
 }
