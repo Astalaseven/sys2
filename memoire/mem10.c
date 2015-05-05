@@ -1,13 +1,15 @@
 /* Généralisez-le programme du producteur-consommateur au cas ou on a un producteur et plu-
 sieurs consommateurs. Le producteur produit les 26 lettres de l’alphabet. Chaque consommateur affiche.
 ce qu’il lit. Le résultat doit être 26 lettres, peu importe qui consomme quoi. */
- 
+
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sem.h>
 #include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
 #include <sys/types.h>
-#include <signal.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -25,7 +27,6 @@ struct strcii
 
 int empty, filled, tq, shm, sem;
 struct strcii * cii;
-
 
 
 void opsem(int sem, int i)
@@ -81,7 +82,10 @@ void clean()
         kill((*cii).pids[i], SIGKILL);
     
     // detach and delete shared memory
-    shmdt(cii);
+    if ((shmdt(cii)) < 0)
+    {
+        perror("[shmdt]");
+    }
     delete_shm(shm);
     
     // delete semaphores
@@ -93,7 +97,7 @@ void clean()
 
 int main()
 {
-    int i, j;
+    int i;
 
     // handler for ctrl-c, needed to stop the program and clean memory/semaphores
     signal(SIGINT, clean);
