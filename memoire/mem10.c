@@ -91,6 +91,7 @@ void clean()
     // delete semaphores
     delete_sem(filled);
     delete_sem(empty);
+    delete_sem(tq);
     
     exit(0);
 }
@@ -104,21 +105,21 @@ int main()
     
     
     // init ARRAY_SIZE bytes memory zone
-    if ((shm = shmget(10, ARRAY_SIZE, 0777|IPC_CREAT)) < 0)
+    if ((shm = shmget(101, ARRAY_SIZE, 0666|IPC_CREAT)) < 0)
     {
         perror("[shmget]");
         exit(-1);
     }
     
     // attach memory zone
-    cii = (struct strcii *) shmat(shm, 0, 0777);
+    cii = (struct strcii *) shmat(shm, 0, 0666);
     
     (*cii).head  = 0;
     (*cii).queue = 0;
     
         
     // create semaphore filled
-    if ((filled = semget(10, 1, 0666|IPC_CREAT)) < 0)
+    if ((filled = semget(102, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- filled]");
         exit(-1);
@@ -132,7 +133,7 @@ int main()
     }
     
     // create semaphore empty cases
-    if ((empty = semget(11, 1, 0666|IPC_CREAT)) < 0)
+    if ((empty = semget(103, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- empty]");
         exit(-1);
@@ -146,7 +147,7 @@ int main()
     }
     
     // create semaphore head queue
-    if ((tq = semget(8, 1, 0666|IPC_CREAT)) < 0)
+    if ((tq = semget(104, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- tq]");
         exit(-1);

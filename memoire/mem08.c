@@ -1,8 +1,8 @@
 /* Généralisez le programme du producteur-consommateur au cas où on a plusieurs producteurs
 et un seul consommateur. Chaque producteur produit les 26 lettres de l’alphabet. Le consommateur les
-affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres, peu importe l’ordre.
- */
- 
+affiche. Par exemple, pour deux producteurs, le résultat doit être 52 lettres, peu importe l’ordre. */
+
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
@@ -101,7 +101,7 @@ int main()
     
     
     // init ARRAY_SIZE bytes memory zone
-    if ((shm = shmget(7, sizeof(struct strci), 0666|IPC_CREAT)) < 0)
+    if ((shm = shmget(801, sizeof(struct strci), 0666|IPC_CREAT)) < 0)
     {
         perror("[shmget]");
         exit(-1);
@@ -112,7 +112,7 @@ int main()
     (*ci).pos = 0;
     
     // create semaphore filled cases
-    if ((filled = semget(8, 1, 0666|IPC_CREAT)) < 0)
+    if ((filled = semget(802, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- filled]");
         exit(-1);
@@ -126,7 +126,7 @@ int main()
     }
     
     // create semaphore empty cases
-    if ((empty = semget(9, 1, 0666|IPC_CREAT)) < 0)
+    if ((empty = semget(803, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- empty]");
         exit(-1);
@@ -140,7 +140,7 @@ int main()
     }
     
     // create semaphore position
-    if ((position = semget(10, 1, 0666|IPC_CREAT)) < 0)
+    if ((position = semget(804, 1, 0666|IPC_CREAT)) < 0)
     {
         perror("[semget -- position]");
         exit(-1);
@@ -200,4 +200,6 @@ int main()
     while (wait(0) > 0);
     
     clean(0);
+    
+    exit(0);
 }
